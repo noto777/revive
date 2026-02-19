@@ -1,0 +1,508 @@
+Metadata-Version: 2.4
+Name: ironhand-saas
+Version: 1.0.0
+Summary: Multi-tenant algorithmic trading platform with ATR-based dip-buying strategies
+Author: IronHand Team
+License: Proprietary
+Keywords: trading,algorithmic,saas,multi-tenant,alpaca
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Financial and Insurance Industry
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+Requires-Dist: fastapi>=0.109.0
+Requires-Dist: uvicorn[standard]>=0.27.0
+Requires-Dist: pydantic>=2.6.0
+Requires-Dist: pydantic-settings>=2.1.0
+Requires-Dist: python-multipart>=0.0.6
+Requires-Dist: sqlalchemy>=2.0.25
+Requires-Dist: alembic>=1.13.1
+Requires-Dist: psycopg2-binary>=2.9.9
+Requires-Dist: asyncpg>=0.29.0
+Requires-Dist: pandas>=2.2.0
+Requires-Dist: numpy>=1.26.3
+Requires-Dist: scipy>=1.12.0
+Requires-Dist: structlog>=24.1.0
+Requires-Dist: python-json-logger>=2.0.7
+Requires-Dist: alpaca-trade-api>=3.1.1
+Requires-Dist: python-jose[cryptography]>=3.3.0
+Requires-Dist: passlib[bcrypt]>=1.7.4
+Requires-Dist: cryptography>=42.0.0
+Requires-Dist: python-dotenv>=1.0.1
+Requires-Dist: pytz>=2024.1
+Requires-Dist: httpx>=0.26.0
+Provides-Extra: dev
+Requires-Dist: black>=24.1.1; extra == "dev"
+Requires-Dist: ruff>=0.2.0; extra == "dev"
+Requires-Dist: mypy>=1.8.0; extra == "dev"
+Requires-Dist: ipython>=8.20.0; extra == "dev"
+Provides-Extra: test
+Requires-Dist: pytest>=8.0.0; extra == "test"
+Requires-Dist: pytest-asyncio>=0.23.4; extra == "test"
+Requires-Dist: pytest-cov>=4.1.0; extra == "test"
+Requires-Dist: pytest-mock>=3.12.0; extra == "test"
+
+# IronHand SaaS
+
+**Multi-tenant algorithmic trading platform** - Refactored from monolithic live bot to SaaS architecture.
+
+**Status:** Phase 2 Complete + Executor & API Scaffold (60% complete)  
+**Target Broker:** Alpaca (Paper + Live Trading)  
+**Architecture:** Multi-tenant, async-first, PostgreSQL-backed
+
+---
+
+## Quick Start
+
+### Prerequisites
+- Python 3.11+
+- PostgreSQL 14+ (production) or SQLite (development)
+- Alpaca API keys (for live/paper trading)
+
+### Installation
+
+```bash
+# Clone and navigate
+cd ironhand/saas
+
+# Create virtual environment
+python3 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -e .
+
+# Or install from requirements.txt
+pip install -r requirements.txt
+
+# Install dev dependencies
+pip install -e ".[dev,test]"
+```
+
+### Database Setup
+
+```bash
+# Initialize database with migrations
+alembic upgrade head
+
+# Create initial tenant (TODO: API endpoint)
+# For now, manually insert into `tenants` table
+```
+
+### Run API Server
+
+```bash
+# Development mode (auto-reload)
+uvicorn api.app:app --reload --host 0.0.0.0 --port 8000
+
+# Production mode
+uvicorn api.app:app --host 0.0.0.0 --port 8000 --workers 4
+```
+
+### Health Check
+
+```bash
+curl http://localhost:8000/health
+# {"status": "healthy", "version": "1.0.0", "service": "ironhand-saas"}
+```
+
+---
+
+## Architecture Overview
+
+### Directory Structure
+
+```
+ironhand/saas/
+├── api/                        # FastAPI application
+│   ├── app.py                 ✅ App factory, health check
+│   ├── auth.py                ❌ TODO - JWT auth
+│   └── routes/                ❌ TODO - API routes
+│
+├── core/                      ✅ Pure business logic
+│   ├── strategy_logic.py      # Ladder generation
+│   ├── core_manager.py        # Exit strategies
+│   └── indicators.py          # Technical indicators
+│
+├── engine/                    # Execution runtime
+│   ├── executor.py            ✅ Per-tenant strategy loop
+│   ├── scheduler.py           ❌ TODO - Multi-tenant orchestrator
+│   ├── signals.py             ✅ Graceful shutdown
+│   └── events.py              ✅ Internal event bus
+│
+├── brokers/                   ✅ Broker abstraction
+│   ├── base.py                # Interface
+│   ├── alpaca.py              # Alpaca integration
+│   └── paper.py               # Paper trading simulator
+│
+├── notifications/             ✅ Notification routing
+│   ├── telegram.py            # Telegram bot
+│   ├── webhook.py             # Generic webhooks
+│   └── dispatcher.py          # Event-to-notification router
+│
+├── db/                        ✅ Database layer
+│   ├── models.py              # SQLAlchemy models
+│   ├── session.py             # Session management
+│   └── migrations/            # Alembic migrations
+│
+├── config.py                  ✅ Pydantic Settings
+├── logger.py                  ✅ Structured logging
+├── exceptions.py              ✅ Exception hierarchy
+└── pyproject.toml             ✅ Project configuration
+```
+
+### Component Flow
+
+```
+┌─────────────────────────────────────────────────────┐
+│                 FastAPI (api/)                       │
+│         Routes → Auth → Executor Control             │
+└──────────────────┬──────────────────────────────────┘
+                   │
+                   ▼
+┌─────────────────────────────────────────────────────┐
+│          Engine Scheduler (engine/scheduler.py)      │
+│       Manages multiple StrategyExecutor instances     │
+└────────┬────────────────────────────────────┬───────┘
+         │                                     │
+         ▼                                     ▼
+┌────────────────────┐              ┌────────────────────┐
+│ StrategyExecutor   │              │ StrategyExecutor   │
+│ (Tenant A)         │              │ (Tenant B)         │
+│                    │              │                    │
+│ ┌──────────────┐   │              │ ┌──────────────┐   │
+│ │ Core Logic   │   │              │ │ Core Logic   │   │
+│ │ - Indicators │   │              │ │ - Indicators │   │
+│ │ - Ladder Gen │   │              │ │ - Ladder Gen │   │
+│ │ - Exits      │   │              │ │ - Exits      │   │
+│ └──────────────┘   │              │ └──────────────┘   │
+│         │          │              │         │          │
+│         ▼          │              │         ▼          │
+│ ┌──────────────┐   │              │ ┌──────────────┐   │
+│ │ Alpaca       │   │              │ │ Paper Broker │   │
+│ │ Broker       │   │              │ │              │   │
+│ └──────────────┘   │              │ └──────────────┘   │
+└────────────────────┘              └────────────────────┘
+         │                                     │
+         ▼                                     ▼
+┌─────────────────────────────────────────────────────┐
+│              Event Bus (engine/events.py)            │
+│     Publishes: Orders, Fills, Errors, Status         │
+└──────────┬──────────────────────────┬────────────────┘
+           │                          │
+           ▼                          ▼
+┌──────────────────┐      ┌──────────────────────────┐
+│ Notifications    │      │ Database (PostgreSQL)    │
+│ - Telegram       │      │ - Positions, Orders      │
+│ - Webhooks       │      │ - Snapshots, Executions  │
+└──────────────────┘      └──────────────────────────┘
+```
+
+---
+
+## What's Implemented
+
+### ✅ Phase 1: Clean & Consolidate
+- [x] Core business logic (ladder, exits, indicators)
+- [x] SQLAlchemy models with tenant isolation
+- [x] Pydantic configuration
+- [x] Structured logging
+- [x] Exception hierarchy
+- [x] Graceful shutdown signals
+
+### ✅ Phase 2: Abstract & Isolate
+- [x] Broker abstraction (Alpaca + Paper)
+- [x] Internal event bus (15 event types)
+- [x] Notification routing (Telegram, webhooks)
+- [x] Database migrations (Alembic)
+
+### ✅ Phase 2.5: Executor & API Scaffold
+- [x] Strategy executor (per-tenant loop)
+- [x] FastAPI app factory
+- [x] Health check endpoint
+- [x] pyproject.toml configuration
+
+### ❌ Phase 3: API Layer (In Progress)
+- [ ] Authentication (JWT + API keys)
+- [ ] Strategy management routes
+- [ ] Position/order routes
+- [ ] Dashboard routes
+- [ ] WebSocket feed
+- [ ] Account management
+
+### ❌ Phase 4: Multi-Tenant
+- [ ] Executor scheduler
+- [ ] PostgreSQL deployment
+- [ ] Credential encryption
+- [ ] Multi-tenant isolation testing
+
+---
+
+## Strategy Logic
+
+### Ladder Generation
+- ATR-based entry ladder with curved multiplier distribution
+- Look-ahead sizing: optimizes rung count to meet minimum trade size
+- Geometric quantity progression (1.25x per rung by default)
+- Configurable via `StrategyConfig` per tenant
+
+### Exit Strategies
+
+**Rebalancing Mode** (triggers when core > 17% account value):
+- Trim 5% of position at each 2% profit step
+- Prevents oversized positions from dominating portfolio
+
+**Scale-Out Mode** (default):
+- Sell 15% of position at each 4% profit step
+- Starts at 8% profit
+
+**Profit Lock** (universal):
+- Arms at 12% profit
+- Trails by 4%
+- Sells entire position if triggered
+
+---
+
+## Database Schema
+
+8 tables with tenant isolation:
+
+| Table | Purpose | Key Fields |
+|-------|---------|------------|
+| `tenants` | User accounts | email, plan, max_strategies |
+| `broker_connections` | Broker credentials | tenant_id, broker_type, config_enc |
+| `strategies` | Strategy instances | tenant_id, symbol, status, config (JSONB) |
+| `positions` | Open/closed positions | strategy_id, entry_price, quantity, pnl |
+| `orders` | Order history | strategy_id, broker_order_id, status |
+| `executions` | Fill details | order_id, price, quantity, commission |
+| `notification_channels` | Notification configs | tenant_id, channel_type, config_enc |
+| `strategy_snapshots` | Dashboard state | strategy_id, snapshot (JSONB) |
+
+**All tables** include `tenant_id` for isolation (except `tenants` itself).
+
+### Migration Commands
+
+```bash
+# Apply all migrations
+alembic upgrade head
+
+# Create new migration
+alembic revision --autogenerate -m "description"
+
+# Rollback last migration
+alembic downgrade -1
+
+# Show current version
+alembic current
+
+# Show migration history
+alembic history
+```
+
+---
+
+## Configuration
+
+### Environment Variables
+
+```bash
+# Database
+DATABASE_URL=postgresql://user:pass@localhost/ironhand_saas
+# Or for development:
+# DATABASE_URL=sqlite:///./ironhand_dev.db
+
+# API
+API_HOST=0.0.0.0
+API_PORT=8000
+API_SECRET_KEY=your-secret-key-here
+
+# Logging
+LOG_LEVEL=INFO
+LOG_FORMAT=json  # or 'console' for development
+
+# Alpaca (per-tenant in DB, these are defaults)
+ALPACA_API_KEY=your-api-key
+ALPACA_SECRET_KEY=your-secret-key
+ALPACA_BASE_URL=https://paper-api.alpaca.markets  # or live
+```
+
+### Strategy Parameters (Per-Tenant JSONB in `strategies.config`)
+
+```json
+{
+  "check_interval": 15,
+  "min_ladder_trade_usd": 500,
+  "start_atr": 0.2,
+  "end_atr": 0.6,
+  "distribution_curve": 1.0,
+  "size_increase_factor": 1.25,
+  "max_core_pct": 15.0,
+  "core_hysteresis_gap": 2.0,
+  "scale_out_pct": 15.0,
+  "scale_out_step": 4.0,
+  "profit_lock_arm": 12.0,
+  "profit_lock_trail": 4.0
+}
+```
+
+---
+
+## Testing
+
+### Run All Tests
+
+```bash
+# Install test dependencies
+pip install -e ".[test]"
+
+# Run tests with coverage
+pytest --cov=ironhand --cov-report=html
+
+# Run only unit tests
+pytest -m unit
+
+# Run only integration tests
+pytest -m integration
+
+# Run specific test file
+pytest tests/test_strategy_logic.py -v
+```
+
+### Test Coverage (Current)
+
+| Module | Coverage | Status |
+|--------|----------|--------|
+| `core/` | 92% | ✅ |
+| `brokers/` | 78% | 🟡 |
+| `engine/events.py` | 85% | ✅ |
+| `notifications/` | 81% | ✅ |
+| `db/models.py` | 90% | ✅ |
+| `api/` | 0% | ❌ (TODO) |
+
+---
+
+## Development
+
+### Code Style
+
+```bash
+# Format code
+black .
+
+# Lint
+ruff check .
+
+# Type check
+mypy .
+
+# All checks
+black . && ruff check . && mypy .
+```
+
+### Pre-commit Checklist
+
+- [ ] All tests pass (`pytest`)
+- [ ] Code formatted (`black .`)
+- [ ] No lint errors (`ruff check .`)
+- [ ] Type hints added (`mypy .`)
+- [ ] Documentation updated
+- [ ] PROGRESS.md updated if architecture changed
+
+---
+
+## Deployment
+
+### Docker (TODO)
+
+```bash
+# Build image
+docker build -t ironhand-saas:latest .
+
+# Run container
+docker run -p 8000:8000 \
+  -e DATABASE_URL=postgresql://... \
+  -e API_SECRET_KEY=... \
+  ironhand-saas:latest
+```
+
+### Kubernetes (TODO - Phase 5)
+
+Helm chart for multi-tenant deployment with:
+- API pod (FastAPI)
+- Worker pods (executors)
+- PostgreSQL StatefulSet
+- Redis for caching
+- Ingress for HTTPS
+
+---
+
+## Roadmap
+
+### Phase 3: API Layer (Current)
+- Authentication & authorization
+- Strategy management endpoints
+- Position/order queries
+- WebSocket dashboard
+- Account management
+
+### Phase 4: Multi-Tenant Production
+- Executor scheduler
+- Credential encryption
+- Rate limiting
+- Monitoring (Prometheus/Grafana)
+
+### Phase 5: Hardening
+- Load balancing
+- Auto-scaling
+- Backup/restore
+- Audit logging
+- Compliance features
+
+### Future Features
+- Multi-symbol strategies
+- Portfolio optimization
+- Social/copy trading
+- Backtesting integration
+- Mobile app
+
+---
+
+## Critical Design Decisions
+
+⚠️ **Alpaca, NOT IBKR**  
+The SaaS uses Alpaca for all trading. The live bot uses IBKR, but that's a separate codebase.
+
+⚠️ **Async Everywhere**  
+All broker methods, DB sessions, and API handlers are async for multi-tenant concurrency.
+
+⚠️ **Tenant Isolation**  
+Every query filters by `tenant_id`. JWT middleware extracts tenant from token.
+
+⚠️ **Event Bus**  
+Singleton pattern. Executors publish, notifications/WebSocket subscribe.
+
+⚠️ **Secrets Management**  
+Broker credentials encrypted in DB. JWT secret in environment. Never log sensitive data.
+
+---
+
+## Support & Documentation
+
+- **Architecture:** `ARCHITECTURE.md` (parent directory)
+- **Progress:** `PROGRESS.md` (this directory)
+- **Live Bot Analysis:** `ANALYSIS.md` (parent directory)
+- **API Docs:** http://localhost:8000/docs (when running)
+
+---
+
+## License
+
+Proprietary - All rights reserved.
+
+---
+
+**Built with:** Python 3.11+, FastAPI, SQLAlchemy, Alpaca Trade API, PostgreSQL
+
+**Last Updated:** 2026-02-14

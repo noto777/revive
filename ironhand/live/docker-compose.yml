@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  ironhand-bot:
+    build: .
+    container_name: ironhand_saas
+    restart: unless-stopped
+    volumes:
+      - .:/app
+      - ./data:/app/data
+    environment:
+      - TZ=America/New_York
+    command: python main_saas.py --user_id default

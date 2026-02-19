@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    command: ./venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://revive:revivepass@db/revive_db
+      - REDIS_URL=redis://redis:6379/0
+      - STRIPE_API_KEY=${STRIPE_API_KEY}
+    depends_on:
+      - db
+      - redis
+
+  db:
+    image: postgres:15
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=revive
+      - POSTGRES_PASSWORD=revivepass
+      - POSTGRES_DB=revive_db
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+
+volumes:
+  postgres_data:
