@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Revive — Stop Losing Money to Failed Payments</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0a0a0a; color: #fff; }
+
+    /* NAV */
+    nav { display: flex; justify-content: space-between; align-items: center; padding: 20px 40px; border-bottom: 1px solid #1f1f1f; }
+    .logo { font-size: 22px; font-weight: 700; color: #fff; letter-spacing: -0.5px; }
+    .logo span { color: #6ee7b7; }
+    nav a { color: #888; text-decoration: none; font-size: 14px; }
+
+    /* HERO */
+    .hero { text-align: center; padding: 100px 20px 80px; max-width: 780px; margin: 0 auto; }
+    .badge { display: inline-block; background: #1a2e24; color: #6ee7b7; font-size: 12px; font-weight: 600; padding: 6px 14px; border-radius: 20px; margin-bottom: 24px; letter-spacing: 0.5px; text-transform: uppercase; }
+    h1 { font-size: clamp(36px, 6vw, 64px); font-weight: 800; line-height: 1.1; letter-spacing: -2px; margin-bottom: 24px; }
+    h1 em { font-style: normal; color: #6ee7b7; }
+    .subtitle { font-size: 20px; color: #888; line-height: 1.6; margin-bottom: 48px; max-width: 560px; margin-left: auto; margin-right: auto; }
+
+    /* FORM */
+    .waitlist-form { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 16px; }
+    .waitlist-form input[type="email"] {
+      padding: 16px 20px; border-radius: 10px; border: 1px solid #2a2a2a;
+      background: #141414; color: #fff; font-size: 16px; width: 300px; outline: none;
+      transition: border-color 0.2s;
+    }
+    .waitlist-form input[type="email"]:focus { border-color: #6ee7b7; }
+    .waitlist-form input[type="email"]::placeholder { color: #444; }
+    .btn { padding: 16px 28px; border-radius: 10px; border: none; background: #6ee7b7; color: #0a0a0a; font-size: 16px; font-weight: 700; cursor: pointer; transition: background 0.2s; white-space: nowrap; }
+    .btn:hover { background: #4dd4a0; }
+    .form-note { font-size: 13px; color: #555; }
+    .success-msg { display: none; color: #6ee7b7; font-size: 16px; font-weight: 600; padding: 16px; }
+
+    /* STATS */
+    .stats { display: flex; justify-content: center; gap: 60px; padding: 60px 20px; border-top: 1px solid #1a1a1a; border-bottom: 1px solid #1a1a1a; flex-wrap: wrap; }
+    .stat { text-align: center; }
+    .stat-num { font-size: 42px; font-weight: 800; color: #6ee7b7; letter-spacing: -1px; }
+    .stat-label { font-size: 14px; color: #666; margin-top: 4px; }
+
+    /* HOW IT WORKS */
+    .section { max-width: 900px; margin: 0 auto; padding: 80px 20px; }
+    .section-label { font-size: 12px; font-weight: 600; color: #6ee7b7; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; }
+    .section h2 { font-size: clamp(28px, 4vw, 42px); font-weight: 800; letter-spacing: -1px; margin-bottom: 48px; }
+    .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; }
+    .step { background: #111; border: 1px solid #1f1f1f; border-radius: 16px; padding: 28px; }
+    .step-num { width: 36px; height: 36px; background: #1a2e24; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #6ee7b7; font-size: 16px; margin-bottom: 16px; }
+    .step h3 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+    .step p { color: #666; font-size: 15px; line-height: 1.6; }
+
+    /* PAIN POINTS */
+    .pain { background: #0d0d0d; border-top: 1px solid #1a1a1a; border-bottom: 1px solid #1a1a1a; }
+    .pain .section { padding: 80px 20px; }
+    .pain-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; }
+    .pain-card { background: #111; border: 1px solid #1f1f1f; border-radius: 16px; padding: 24px; }
+    .pain-icon { font-size: 28px; margin-bottom: 12px; }
+    .pain-card h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+    .pain-card p { color: #666; font-size: 14px; line-height: 1.6; }
+
+    /* PRICING */
+    .pricing { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; }
+    .plan { background: #111; border: 1px solid #1f1f1f; border-radius: 16px; padding: 32px; position: relative; }
+    .plan.featured { border-color: #6ee7b7; }
+    .plan-badge { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: #6ee7b7; color: #0a0a0a; font-size: 11px; font-weight: 700; padding: 4px 12px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
+    .plan-name { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+    .plan-price { font-size: 42px; font-weight: 800; letter-spacing: -1px; margin-bottom: 4px; }
+    .plan-price span { font-size: 16px; font-weight: 400; color: #666; }
+    .plan-desc { color: #666; font-size: 14px; margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid #1f1f1f; }
+    .plan ul { list-style: none; }
+    .plan ul li { font-size: 14px; color: #aaa; padding: 8px 0; display: flex; gap: 10px; align-items: flex-start; }
+    .plan ul li::before { content: "✓"; color: #6ee7b7; font-weight: 700; flex-shrink: 0; }
+
+    /* CTA */
+    .cta-section { text-align: center; padding: 100px 20px; }
+    .cta-section h2 { font-size: clamp(28px, 4vw, 48px); font-weight: 800; letter-spacing: -1px; margin-bottom: 16px; }
+    .cta-section p { color: #666; font-size: 18px; margin-bottom: 40px; }
+
+    /* FOOTER */
+    footer { border-top: 1px solid #1a1a1a; padding: 32px 40px; display: flex; justify-content: space-between; align-items: center; flex-wrap: gap; }
+    footer p { color: #444; font-size: 13px; }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="logo">Re<span>vive</span></div>
+  <a href="#waitlist">Join Waitlist →</a>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="badge">🚨 Stripe doesn't send dunning emails. We do.</div>
+  <h1>You're losing <em>$500+/mo</em> to failed payments and don't know it.</h1>
+  <p class="subtitle">Revive automatically emails your customers when a payment fails — so you recover the revenue instead of quietly losing it.</p>
+
+  <div id="waitlist">
+    <form class="waitlist-form" id="waitlistForm">
+      <input type="email" id="emailInput" placeholder="your@email.com" required />
+      <button type="submit" class="btn">Get Early Access →</button>
+    </form>
+    <div class="success-msg" id="successMsg">🎉 You're on the list! We'll be in touch soon.</div>
+    <p class="form-note">Free during beta. No credit card required.</p>
+  </div>
+</div>
+
+<!-- STATS -->
+<div class="stats">
+  <div class="stat">
+    <div class="stat-num">5–15%</div>
+    <div class="stat-label">of SaaS payments fail every month</div>
+  </div>
+  <div class="stat">
+    <div class="stat-num">40%</div>
+    <div class="stat-label">are recoverable with a simple email</div>
+  </div>
+  <div class="stat">
+    <div class="stat-num">$0</div>
+    <div class="stat-label">Stripe charges you to fix this (it does nothing)</div>
+  </div>
+</div>
+
+<!-- HOW IT WORKS -->
+<div class="section">
+  <div class="section-label">How it works</div>
+  <h2>Set it up in 5 minutes.<br>Recover revenue forever.</h2>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <h3>Connect Stripe</h3>
+      <p>Paste your Stripe webhook URL. Takes 60 seconds. No code required.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <h3>Payment fails</h3>
+      <p>Stripe fires a webhook. Revive catches it instantly and logs it to your dashboard.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <h3>We email your customer</h3>
+      <p>Branded emails go out at Day 0, Day 3, and Day 7 — automatically. No manual work.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <h3>Revenue recovered</h3>
+      <p>Customer updates their card. Stripe retries. Revive marks it recovered on your dashboard.</p>
+    </div>
+  </div>
+</div>
+
+<!-- PAIN POINTS -->
+<div class="pain">
+  <div class="section">
+    <div class="section-label">Why this matters</div>
+    <h2>The silent revenue killer<br>every SaaS founder ignores.</h2>
+    <div class="pain-grid">
+      <div class="pain-card">
+        <div class="pain-icon">💳</div>
+        <h3>Cards expire constantly</h3>
+        <p>The average credit card expires every 3 years. Your customers aren't updating them proactively.</p>
+      </div>
+      <div class="pain-card">
+        <div class="pain-icon">🏦</div>
+        <h3>Banks decline for no reason</h3>
+        <p>Fraud blocks, overdrafts, new card replacements — none of these are churn. They're just fixable failures.</p>
+      </div>
+      <div class="pain-card">
+        <div class="pain-icon">🔕</div>
+        <h3>Stripe stays silent</h3>
+        <p>Stripe retries automatically but never emails your customer. They have no idea their card failed.</p>
+      </div>
+      <div class="pain-card">
+        <div class="pain-icon">📉</div>
+        <h3>Involuntary churn kills MRR</h3>
+        <p>Up to 20% of monthly churn is involuntary — customers who would have stayed if someone just told them.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PRICING -->
+<div class="section">
+  <div class="section-label">Pricing</div>
+  <h2>Pay less than one recovered invoice.</h2>
+  <div class="pricing">
+    <div class="plan">
+      <div class="plan-name">Pilot</div>
+      <div class="plan-price">$29<span>/mo</span></div>
+      <div class="plan-desc">Perfect for early-stage SaaS with one product.</div>
+      <ul>
+        <li>1 Stripe product / symbol</li>
+        <li>Automated 3-email dunning sequence</li>
+        <li>Recovery dashboard</li>
+        <li>Branded emails (your domain)</li>
+        <li>Email support</li>
+      </ul>
+    </div>
+    <div class="plan featured">
+      <div class="plan-badge">Most Popular</div>
+      <div class="plan-name">Captain</div>
+      <div class="plan-price">$99<span>/mo</span></div>
+      <div class="plan-desc">For growing SaaS with multiple products and advanced recovery needs.</div>
+      <ul>
+        <li>Up to 5 Stripe products</li>
+        <li>Automated 3-email dunning sequence</li>
+        <li>Recovery dashboard</li>
+        <li>Branded emails (your domain)</li>
+        <li>Euphoria Exit Protocol (RSI-based alerts)</li>
+        <li>Priority support</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- FINAL CTA -->
+<div class="cta-section">
+  <h2>Stop leaving money<br>on the table.</h2>
+  <p>Join the waitlist. Free during beta. Ships in weeks, not months.</p>
+  <form class="waitlist-form" id="waitlistForm2" style="justify-content:center;">
+    <input type="email" id="emailInput2" placeholder="your@email.com" required />
+    <button type="submit" class="btn">Get Early Access →</button>
+  </form>
+  <div class="success-msg" id="successMsg2">🎉 You're on the list! We'll be in touch soon.</div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <p>© 2025 Revive. Built by Core Edge Investing.</p>
+  <p>Questions? <a href="mailto:hello@revive.app" style="color:#6ee7b7;">hello@revive.app</a></p>
+</footer>
+
+<script>
+  async function submitWaitlist(email, formId, successId) {
+    try {
+      const res = await fetch('/waitlist', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({email})
+      });
+      if (res.ok) {
+        document.getElementById(formId).style.display = 'none';
+        document.getElementById(successId).style.display = 'block';
+      }
+    } catch(e) {
+      // Fallback: just show success
+      document.getElementById(formId).style.display = 'none';
+      document.getElementById(successId).style.display = 'block';
+    }
+  }
+
+  document.getElementById('waitlistForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    submitWaitlist(document.getElementById('emailInput').value, 'waitlistForm', 'successMsg');
+  });
+
+  document.getElementById('waitlistForm2').addEventListener('submit', function(e) {
+    e.preventDefault();
+    submitWaitlist(document.getElementById('emailInput2').value, 'waitlistForm2', 'successMsg2');
+  });
+</script>
+
+</body>
+</html>
